@@ -1,0 +1,292 @@
+< !-- Awin verification 001 -->
+Skip to content
+Novixys Software Dev Blog
+
+Home
+How to Generate RSA Keys in Java
+Learn how to generate RSA keys and digitally sign files in java.
+
+
+Contents [hide]
+
+1. Introduction
+2. Generating a Key Pair
+3. Saving the Keys in Binary Format
+3.1. Load Private Key from File
+3.2 Load Public Key from File
+4. Use Base64 for Saving Keys as Text
+5. Generating a Digital Signature
+6. Verifying the Digital Signature
+Source Code
+See Also
+1. Introduction
+Let us learn the basics of generating and using RSA keys in Java.
+
+Java provides classes for the generation of RSA public and private key pairs with the package java.security. You can use RSA keys pairs in public key cryptography.
+
+Public key cryptography uses a pair of keys for encryption. Distribute the public key to whoever needs it but safely secure the private key.
+
+Public key cryptography can be used in two modes:
+
+Encryption: Only the private key can decrypt the data encrypted with the public key.
+
+Authentication: Data encrypted with the private key can only be decrypted with the public key thus proving who the data came from.
+
+2. Generating a Key Pair
+First step in creating an RSA Key Pair is to create a KeyPairGenerator from a factory method by specifying the algorithm (“RSA” in this instance):
+
+1
+KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
+Initialize the KeyPairGenerator with the key size. Use a key size of 1024 or 2048. Currently recommended key size for SSL certificates used in e-commerce is 2048 so that is what we use here.
+
+1
+2
+kpg.initialize(2048);
+KeyPair kp = kpg.generateKeyPair();
+From the KeyPair object, get the public key using getPublic() and the private key using getPrivate().
+
+1
+2
+Key pub = kp.getPublic();
+Key pvt = kp.getPrivate();
+3. Saving the Keys in Binary Format
+Save the keys to hard disk once they are obtained. This allows re-using the keys for encryption, decryption and authentication.
+
+1
+2
+3
+4
+5
+6
+7
+8
+String outFile = ...;
+out = new FileOutputStream(outFile + ".key");
+out.write(pvt.getEncoded());
+out.close();
+ 
+out = new FileOutputStream(outFile + ".pub");
+out.write(pvt.getEncoded());
+out.close();
+What is the format of the saved files? The key information is encoded in different formats for different types of keys. Here is how you can find what format the key was saved in. On my machine, the private key was saved in PKCS#8 format and the public key in X.509 format. We need this information below to load the keys.
+
+1
+2
+3
+4
+5
+System.err.println("Private key format: " + pvt.getFormat());
+// prints "Private key format: PKCS#8" on my machine
+ 
+System.err.println("Public key format: " + pub.getFormat());
+// prints "Public key format: X.509" on my machine
+3.1. Load Private Key from File
+After saving the private key to a file (or a database), you might need to load it at a later time. You can do that using the following code. Note that you need to know what format the data was saved in: PKCS#8 in our case.
+
+1
+2
+3
+4
+5
+6
+7
+8
+/* Read all bytes from the private key file */
+Path path = Paths.get(keyFile);
+byte[] bytes = Files.readAllBytes(path);
+ 
+/* Generate private key. */
+PKCS8EncodedKeySpec ks = new PKCS8EncodedKeySpec(bytes);
+KeyFactory kf = KeyFactory.getInstance("RSA");
+PrivateKey pvt = kf.generatePrivate(ks);
+3.2 Load Public Key from File
+Load the public key from a file as follows. The public key has been saved in X.509 format so we use the X509EncodedKeySpec class to convert it.
+
+1
+2
+3
+4
+5
+6
+7
+8
+/* Read all the public key bytes */
+Path path = Paths.get(keyFile);
+byte[] bytes = Files.readAllBytes(path);
+ 
+/* Generate public key. */
+X509EncodedKeySpec ks = new X509EncodedKeySpec(bytes);
+KeyFactory kf = KeyFactory.getInstance("RSA");
+PublicKey pub = kf.generatePublic(ks);
+4. Use Base64 for Saving Keys as Text
+Save the keys in text format by encoding the data in Base64. Java 8 provides a Base64 class which can be used for the purpose. Save the private key with a comment as follows:
+
+1
+2
+3
+4
+5
+6
+7
+8
+Base64.Encoder encoder = Base64.getEncoder();
+ 
+String outFile = ...;
+Writer out = new FileWriter(outFile + ".key");
+out.write("-----BEGIN RSA PRIVATE KEY-----\n");
+out.write(encoder.encodeToString(pvt.getEncoded()));
+out.write("\n-----END RSA PRIVATE KEY-----\n");
+out.close();
+And the public key too (with a comment):
+
+1
+2
+3
+4
+5
+out = new FileWriter(outFile + ".pub");
+out.write("-----BEGIN RSA PUBLIC KEY-----\n");
+out.write(encoder.encodeToString(kp.getPublic()));
+out.write("\n-----END RSA PUBLIC KEY-----\n");
+out.close();
+5. Generating a Digital Signature
+As mentioned above, one of the purposes of public key cryptography is digital signature i.e. you generate a digital signature from a file contents, sign it with your private key and send the signature along with the file. The recipient can then use your public key to verify that the signature matches the file contents.
+
+Here is how you can do it. Use the signature algorithm “SHA256withRSA” which is guaranteed to be supported on all JVMs. Use the private key (either generated or load from file as shown above) to initialize the Signature object for signing. It is then updated with contents from the data file and the signature is generated and written to the output file. This output file contains the digital signature and must be sent to the recipient for verification.
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+Signature sign = Signature.getInstance("SHA256withRSA");
+sign.initSign(pvt);
+ 
+InputStream in = null;
+try {
+    in = new FileInputStream(dataFile);
+    byte[] buf = new byte[2048];
+    int len;
+    while ((len = in.read(buf)) != -1) {
+    sign.update(buf, 0, len);
+    }
+} finally {
+    if ( in != null ) in.close();
+}
+ 
+OutputStream out = null;
+try {
+    out = new FileOutputStream(signFile);
+    byte[] signature = sign.sign();
+    out.write(signature);
+} finally {
+    if ( out != null ) out.close();
+}
+6. Verifying the Digital Signature
+The recipient uses the digital signature sent with a data file to verify that the data file has not been tampered with. It requires access to the sender’s public key and can be loaded from a file if necessary as presented above.
+
+The code below updates the Signature object with data from the data file. It then loads the signature from file and uses Signature.verify() to check if the signature is valid.
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+Signature sign = Signature.getInstance("SHA256withRSA");
+sign.initVerify(pub);
+ 
+InputStream in = null;
+try {
+    in = new FileInputStream(dataFile);
+    byte[] buf = new byte[2048];
+    int len;
+    while ((len = in.read(buf)) != -1) {
+    sign.update(buf, 0, len);
+    }
+} finally {
+    if ( in != null ) in.close();
+}
+ 
+/* Read the signature bytes from file */
+path = Paths.get(signFile);
+bytes = Files.readAllBytes(path);
+System.out.println(dataFile + ": Signature " +
+   (sign.verify(bytes) ? "OK" : "Not OK"));
+And that in a nutshell is how you can use RSA public and private keys for digital signature and verification.
+
+Source Code
+Go here for the source code.
+
+See Also
+File Encryption and Decryption using RSA in Java
+File Encryption and Decryption using RSA in Java
+Encrypt and Sign a File Using RSA in Java
+Encrypt and Sign a File Using RSA in Java
+Using AES With RSA for File Encryption and Decryption in Java
+Using AES With RSA for File Encryption and Decryption in Java
+Author Jay Sridhar
+Posted on January 24, 2017
+Categories Java
+Tags crypto, java
+
+Post navigation
+PREVIOUS
+Previous post:Java – Read File Line by Line Using Java 8 Streams
+NEXT
+Next post:Java Concurrency and Executors
+POPULAR
+ How to Read a File from Resources Folder in Java How to Read a File from Resources Folder in Java
+ Using AES for Encryption and Decryption in Python Pycrypto Using AES for Encryption and Decryption in Python Pycrypto
+ How to Generate RSA Keys in Java How to Generate RSA Keys in Java
+ How to Extract Data from XML in Java How to Extract Data from XML in Java
+ Using Jackson for JSON Serialization and Deserialization Using Jackson for JSON Serialization and Deserialization
+ Pandas Tutorial - Selecting Rows From a DataFrame Pandas Tutorial - Selecting Rows From a DataFrame
+ File Encryption and Decryption using RSA in Java File Encryption and Decryption using RSA in Java
+ Nested or Inner Classes in Python Nested or Inner Classes in Python
+ How to Use AES for Encryption and Decryption in Java How to Use AES for Encryption and Decryption in Java
+ Converting Between XML and JSON Using JAXB and Jackson Converting Between XML and JSON Using JAXB and Jackson
+LATEST
+Java 9 Modules Tutorial – Getting Started
+How to Generate Bitcoin Addresses in Java
+How to use Docker to Deploy Jupyter with Nginx
+Run Python Web Application in Docker using Nginx and uWsgi
+Nginx Inside Docker – Website Root Configuration
+Nginx Inside Docker with Ubuntu 16.04 HOWTO
+Python Regular Expressions Tutorial – Part 2
+Python Regular Expressions Tutorial – Part 1
+Python Crypto Basics for Building a Blockchain
+Using SSL to Secure Tomcat with HTTPS
+Novixys Software Dev Blog Proudly powered by WordPress
