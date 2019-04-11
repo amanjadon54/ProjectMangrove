@@ -16,6 +16,14 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Current Database: `mangrove`
+--
+
+CREATE DATABASE /*!32312 IF NOT EXISTS*/ `mangrove` /*!40100 DEFAULT CHARACTER SET utf8mb4 */;
+
+USE `mangrove`;
+
+--
 -- Table structure for table `transactions`
 --
 
@@ -29,6 +37,7 @@ CREATE TABLE `transactions` (
   `mode` varchar(20) NOT NULL,
   `amount` int(11) NOT NULL,
   `type` varchar(20) NOT NULL,
+  `ts` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`txnid`),
   KEY `fk_id` (`userid`),
   CONSTRAINT `fk_id` FOREIGN KEY (`userid`) REFERENCES `user_data` (`id`),
@@ -43,7 +52,7 @@ CREATE TABLE `transactions` (
 
 LOCK TABLES `transactions` WRITE;
 /*!40000 ALTER TABLE `transactions` DISABLE KEYS */;
-INSERT INTO `transactions` VALUES ('1','1','progress','online',1000,'credit'),('2','1','successful','payment gateway',2000,'credit'),('3','1','failed','paytm',3000,'credit'),('4','2','successful','online',2000,'credit'),('5','3','successful','online',1000,'credit'),('6','4','successful','online',1500,'credit'),('7','4','successful','online',2500,'credit'),('8','2','successful','DD',3000,'credit');
+INSERT INTO `transactions` VALUES ('1','1','progress','online',1000,'credit','2019-04-11 08:24:06'),('2','1','successful','payment gateway',2000,'credit','2019-04-11 08:24:06'),('3','1','failed','paytm',3000,'credit','2019-04-11 08:24:06'),('4','2','successful','online',2000,'credit','2019-04-11 08:24:06'),('5','3','successful','online',1000,'credit','2019-04-11 08:24:06'),('6','4','successful','online',1500,'credit','2019-04-11 08:24:06'),('7','4','successful','online',2500,'credit','2019-04-11 08:24:06'),('8','2','successful','DD',3000,'credit','2019-04-11 08:24:06'),('9','3','successful','DD',1000,'credit','2019-04-11 08:28:45');
 /*!40000 ALTER TABLE `transactions` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -60,6 +69,7 @@ CREATE TABLE `user_data` (
   `lastName` varchar(20) NOT NULL,
   `email` varchar(20) DEFAULT NULL,
   `kycstatus` varchar(20) DEFAULT '0',
+  `pubKey` varchar(20) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -70,7 +80,7 @@ CREATE TABLE `user_data` (
 
 LOCK TABLES `user_data` WRITE;
 /*!40000 ALTER TABLE `user_data` DISABLE KEYS */;
-INSERT INTO `user_data` VALUES ('1','Rahul','Satija','rahul.s@gmail.com','1'),('2','Akshat','Giri','akshat.g@gmail.com','1'),('3','Mahi','Doni','mahi.d@gmail.com','1'),('4','Shubham','Dkony','s.dkiny@gmail.com','1');
+INSERT INTO `user_data` VALUES ('1','Rahul','Satija','rahul.s@gmail.com','1',NULL),('2','Akshat','Giri','akshat.g@gmail.com','1',NULL),('3','Mahi','Doni','mahi.d@gmail.com','1',NULL),('4','Shubham','Dkony','s.dkiny@gmail.com','1',NULL);
 /*!40000 ALTER TABLE `user_data` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -83,4 +93,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2019-04-09 22:41:18
+-- Dump completed on 2019-04-11 14:04:56
