@@ -79,13 +79,12 @@ try {
 	
 	
 	
-	
-	public boolean isSignatureVerified(PublicKey publicKey,byte[] digitalSignature) throws FileNotFoundException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+	//here data in argument refwers to the data corresponding to which the digital signature is generated
+	public boolean isSignatureVerified(PublicKey publicKey,byte[] digitalSignature,byte[] data) throws FileNotFoundException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
 		Signature sign = Signature.getInstance("SHA256withDSA");
 		sign.initVerify(publicKey);
-//str="Hi how are you";
-//byte[] bytes=str.getBytes();
-sign.update(digitalSignature);
+
+sign.update(data);
 		
 		return sign.verify(digitalSignature);
 	}
